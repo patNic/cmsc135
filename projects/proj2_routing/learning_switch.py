@@ -30,7 +30,7 @@ class LearningSwitch(api.Entity):
         You probablty want to do something in this method.
 
         """
-        pass
+        self.forwarding_table = {}
 
     def handle_link_down(self, port):
         """
@@ -40,7 +40,8 @@ class LearningSwitch(api.Entity):
         valid here.
 
         """
-        pass
+        if port in self.forwarding_table.items():
+            del self.forwarding_table[port]
 
     def handle_rx(self, packet, in_port):
         """
@@ -61,6 +62,14 @@ class LearningSwitch(api.Entity):
         if isinstance(packet, basics.HostDiscoveryPacket):
             # Don't forward discovery messages
             return
+        else:
+            if not (packet.src in self.forwarding_table.values()):
+                self.forwarding_table[in_port] = packet.src
 
-        # Flood out all ports except the input port
-        self.send(packet, in_port, flood=True)
+            if packet.dst in self.forwarding_table.values():
+                out_port = self.forwarding_table.items()[self.forwarding_table.values().index(packet.dst)]
+
+                self.send(packet, out_port, flood=False)
+            else:
+                # Flood out all ports except the input port
+                self.send(packet, in_port, flood=True)
